@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>Calculateur de rentabilité</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --black: #000000; --panel: #0f0f0f; --border: #1f1f1f; --border-soft: #181818;
+  --gold: #c9a961; --gold-soft: #e0c584; --gold-deep: #8a7340;
+  --ink: #e8e6e0; --ink-dim: #8a8a8a; --ink-faint: #4a4a4a;
+  --success: #4a9d6a; --error: #c85a4a; --radius: 8px;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { background: var(--black); }
+body {
+  font-family: var(--font-sans); background: var(--black);
+  background-image: radial-gradient(circle at 20% 0%, rgba(201, 169, 97, 0.04) 0%, transparent 50%), radial-gradient(circle at 80% 100%, rgba(201, 169, 97, 0.03) 0%, transparent 50%);
+  background-attachment: fixed; color: var(--ink); min-height: 100vh;
+  padding: calc(1.5rem + var(--safe-top)) 1rem calc(6rem + var(--safe-bottom));
+  font-size: 15px; line-height: 1.55; max-width: 760px; margin: 0 auto; overscroll-behavior: none;
+}
+header { text-align: center; margin-bottom: 2rem; padding: 1.5rem 0 1.8rem; position: relative; }
+header::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 60px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+header::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-deep), transparent); opacity: 0.5; }
+.logo-mark { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid var(--gold-deep); border-radius: 50%; margin-bottom: 0.8rem; font-family: var(--font-display); font-size: 1.4rem; color: var(--gold); background: rgba(201, 169, 97, 0.04); }
+h1 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 400; margin-bottom: 0.3rem; background: linear-gradient(135deg, var(--gold-soft), var(--gold), var(--gold-deep)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; }
+.signature { font-family: var(--font-display); font-size: 0.8rem; color: var(--gold-deep); letter-spacing: 0.15em; font-style: italic; margin-top: 0.4rem; opacity: 0.8; }
+
+.section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem; overflow: hidden; }
+.section-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
+.section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+.section-title::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-deep); }
+.section-content { padding: 1.2rem; }
+.field { margin-bottom: 1rem; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 0.65rem; color: var(--ink-dim); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; }
+.field input, .field select {
+  width: 100%; padding: 0.85rem 1rem; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--black); color: var(--ink);
+  font-family: var(--font-sans); font-size: 0.9rem;
+  -webkit-appearance: none; appearance: none;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.08); }
+.field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23c9a961' d='M0 0l5 6 5-6z'/></svg>");
+  background-repeat: no-repeat; background-position: right 1rem center; background-size: 10px; cursor: pointer;
+}
+.field select option { background: var(--panel); color: var(--ink); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+@media (max-width: 500px) { .row-2 { grid-template-columns: 1fr; } }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+
+.input-with-suffix { position: relative; display: flex; align-items: center; }
+.input-with-suffix input { padding-right: 2.5rem !important; }
+.input-with-suffix .suffix { position: absolute; right: 1rem; color: var(--gold); font-family: var(--font-mono); font-size: 0.9rem; font-weight: 600; pointer-events: none; user-select: none; }
+
+.benefit-inline {
+  margin-top: 1.2rem; padding: 1.1rem 1.2rem; border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(201, 169, 97, 0.08), rgba(201, 169, 97, 0.02));
+  border: 1px solid var(--gold-deep);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.benefit-inline.negative { background: linear-gradient(135deg, rgba(200, 90, 74, 0.08), rgba(200, 90, 74, 0.02)); border-color: var(--error); }
+.benefit-inline-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 600; color: var(--gold); }
+.benefit-inline.negative .benefit-inline-label { color: var(--error); }
+.benefit-inline-value {
+  font-family: var(--font-display); font-size: 1.5rem; font-weight: 500;
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;
+}
+.benefit-inline.negative .benefit-inline-value {
+  background: linear-gradient(135deg, #e0a0a0, var(--error));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.scenarios-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1.5rem; }
+@media (min-width: 700px) { .scenarios-grid { grid-template-columns: repeat(3, 1fr); } }
+.scenario-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.scenario-card.pessimistic { border-top: 3px solid var(--error); }
+.scenario-card.realistic { border-top: 3px solid var(--gold); }
+.scenario-card.optimistic { border-top: 3px solid var(--success); }
+.scenario-card-header { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border-soft); }
+.scenario-card-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+.scenario-card.pessimistic .scenario-card-title { color: #e0a0a0; }
+.scenario-card.realistic .scenario-card-title { color: var(--gold-soft); }
+.scenario-card.optimistic .scenario-card-title { color: #a0e0b0; }
+.scenario-card-icon { font-size: 1rem; }
+
+/* Inputs des cartes scénarios */
+.scenario-inputs { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border-soft); background: rgba(0, 0, 0, 0.4); }
+.scenario-input-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+.scenario-input-row:last-child { margin-bottom: 0; }
+.scenario-input-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 600; flex-shrink: 0; min-width: 90px; }
+.scenario-input-row input {
+  width: 100%; padding: 0.55rem 0.7rem; border-radius: 5px;
+  border: 1px solid var(--border); background: var(--black); color: var(--ink);
+  font-family: var(--font-mono); font-size: 0.82rem; text-align: right;
+  -webkit-appearance: none;
+}
+.scenario-input-row input:focus { outline: none; border-color: var(--gold-deep); }
+.scenario-input-with-suffix { position: relative; flex: 1; display: flex; align-items: center; }
+.scenario-input-with-suffix input { width: 100%; padding-right: 1.8rem !important; }
+.scenario-input-with-suffix .suffix { position: absolute; right: 0.5rem; color: var(--gold); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; pointer-events: none; user-select: none; }
+
+.scenario-card-body { padding: 1rem; }
+.scenario-row { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; font-size: 0.75rem; border-bottom: 1px solid var(--border-soft); }
+.scenario-row:last-child { border-bottom: none; }
+.scenario-row-label { color: var(--ink-dim); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.scenario-row-value { font-family: var(--font-mono); color: var(--ink); font-weight: 600; font-size: 0.82rem; }
+.scenario-row.highlight { margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid var(--gold-deep); border-bottom: none; }
+.scenario-row.highlight .scenario-row-label { color: var(--gold); font-weight: 700; }
+.scenario-row.highlight .scenario-row-value { font-family: var(--font-display); font-size: 1.15rem; font-weight: 500; }
+.scenario-card.pessimistic .scenario-row.highlight .scenario-row-value { color: #e0a0a0; }
+.scenario-card.realistic .scenario-row.highlight .scenario-row-value { color: var(--gold-soft); }
+.scenario-card.optimistic .scenario-row.highlight .scenario-row-value { color: #a0e0b0; }
+.scenario-row.negative .scenario-row-value { color: var(--error); }
+
+.footer-note { font-size: 0.68rem; color: var(--ink-faint); text-align: center; margin-top: 1.5rem; line-height: 1.6; font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">◈</div>
+  <h1>Calculateur de rentabilité</h1>
+  <p class="signature">By Mohamed.B</p>
+</header>
+
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Ville</div>
+  </div>
+  <div class="section-content">
+    <div class="field">
+      <label>Choisissez la ville</label>
+      <select id="city-select">
+        <option value="">— Sélectionner —</option>
+        <option>Paris</option><option>Marseille</option><option>Lyon</option>
+        <option>Toulouse</option><option>Nice</option><option>Nantes</option>
+        <option>Montpellier</option><option>Strasbourg</option><option>Bordeaux</option>
+        <option>Lille</option><option>Rennes</option><option>Reims</option>
+        <option>Toulon</option><option>Saint-Étienne</option><option>Le Havre</option>
+        <option>Grenoble</option><option>Dijon</option><option>Angers</option>
+        <option>Nîmes</option><option>Aix-en-Provence</option><option>Brest</option>
+        <option>Le Mans</option><option>Tours</option><option>Clermont-Ferrand</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Revenus locatifs</div>
+  </div>
+  <div class="section-content">
+    <div class="row-2">
+      <div class="field">
+        <label>Prix à la nuitée (€)</label>
+        <input type="number" id="nightly-price" min="0" step="1" value="75">
+      </div>
+      <div class="field">
+        <label>Taux d'occupation</label>
+        <div class="input-with-suffix">
+          <input type="number" id="occupancy-rate" min="0" max="100" step="1" value="65">
+          <span class="suffix">%</span>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Chiffre d'affaires mensuel</label>
+      <input type="text" id="monthly-revenue-display" readonly value="0 €" style="color: var(--gold-soft); font-family: var(--font-mono); font-weight: 600;">
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Charges mensuelles</div>
+  </div>
+  <div class="section-content">
+    <div class="row-2">
+      <div class="field"><label>Loyer (€)</label><input type="number" id="charge-rent" min="0" step="1" value="840"></div>
+      <div class="field"><label>Abonnements (€)</label><input type="number" id="charge-subscriptions" min="0" step="1" value="70"></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>Ménage (€)</label><input type="number" id="charge-cleaning" min="0" step="1" value="150"></div>
+      <div class="field"><label>Expert-comptable (€)</label><input type="number" id="charge-accountant" min="0" step="1" value="100"></div>
+    </div>
+    <div class="field"><label>Assurance pro (€)</label><input type="number" id="charge-insurance" min="0" step="1" value="20"></div>
+
+    <div class="benefit-inline" id="benefit-inline">
+      <span class="benefit-inline-label">Bénéfice mensuel</span>
+      <span class="benefit-inline-value" id="benefit-inline-value">0 €</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Comparaison des 3 scénarios</div>
+  </div>
+  <div class="section-content" style="padding-top: 0;">
+    <div class="scenarios-grid">
+
+      <!-- PESSIMISTE -->
+      <div class="scenario-card pessimistic">
+        <div class="scenario-card-header">
+          <div class="scenario-card-title"><span class="scenario-card-icon">▼</span> Pessimiste</div>
+        </div>
+        <div class="scenario-inputs">
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Prix / nuit</span>
+            <input type="number" id="p-price" min="0" step="1" value="75">
+          </div>
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Nuits occupées</span>
+            <input type="number" id="p-nights-input" min="0" max="30" step="1" value="13">
+          </div>
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Occupation</span>
+            <div class="scenario-input-with-suffix">
+              <input type="number" id="p-occupancy-input" min="0" max="100" step="1" value="45">
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="scenario-card-body">
+          <div class="scenario-row"><span class="scenario-row-label">CA mensuel</span><span class="scenario-row-value" id="p-revenue">0 €</span></div>
+          <div class="scenario-row highlight"><span class="scenario-row-label">Bénéfice mensuel</span><span class="scenario-row-value" id="p-profit">0 €</span></div>
+        </div>
+      </div>
+
+      <!-- RÉALISTE -->
+      <div class="scenario-card realistic">
+        <div class="scenario-card-header">
+          <div class="scenario-card-title"><span class="scenario-card-icon">●</span> Réaliste</div>
+        </div>
+        <div class="scenario-inputs">
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Prix / nuit</span>
+            <input type="number" id="r-price" min="0" step="1" value="75">
+          </div>
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Nuits occupées</span>
+            <input type="number" id="r-nights-input" min="0" max="30" step="1" value="19">
+          </div>
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Occupation</span>
+            <div class="scenario-input-with-suffix">
+              <input type="number" id="r-occupancy-input" min="0" max="100" step="1" value="65">
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="scenario-card-body">
+          <div class="scenario-row"><span class="scenario-row-label">CA mensuel</span><span class="scenario-row-value" id="r-revenue">0 €</span></div>
+          <div class="scenario-row highlight"><span class="scenario-row-label">Bénéfice mensuel</span><span class="scenario-row-value" id="r-profit">0 €</span></div>
+        </div>
+      </div>
+
+      <!-- OPTIMISTE -->
+      <div class="scenario-card optimistic">
+        <div class="scenario-card-header">
+          <div class="scenario-card-title"><span class="scenario-card-icon">▲</span> Optimiste</div>
+        </div>
+        <div class="scenario-inputs">
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Prix / nuit</span>
+            <input type="number" id="o-price" min="0" step="1" value="75">
+          </div>
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Nuits occupées</span>
+            <input type="number" id="o-nights-input" min="0" max="30" step="1" value="25">
+          </div>
+          <div class="scenario-input-row">
+            <span class="scenario-input-label">Occupation</span>
+            <div class="scenario-input-with-suffix">
+              <input type="number" id="o-occupancy-input" min="0" max="100" step="1" value="85">
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="scenario-card-body">
+          <div class="scenario-row"><span class="scenario-row-label">CA mensuel</span><span class="scenario-row-value" id="o-revenue">0 €</span></div>
+          <div class="scenario-row highlight"><span class="scenario-row-label">Bénéfice mensuel</span><span class="scenario-row-value" id="o-profit">0 €</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p class="footer-note">
+  Saisissez <strong>librement les nuits occupées</strong> pour chaque scénario.<br>
+  CA = nuits × prix · Bénéfice = CA − charges.
+</p>
+
+<script>
+var $ = function(id) { return document.getElementById(id); };
+
+function fmtMoney(v) {
+  if (isNaN(v) || !isFinite(v)) return '0 €';
+  return Math.round(v).toLocaleString('fr-FR') + ' €';
+}
+
+// Un scénario utilise maintenant DIRECTEMENT les nuits saisies
+function computeScenario(price, nights, charges) {
+  var revenue = nights * price;
+  var profit = revenue - charges;
+  return { nights: nights, revenue: revenue, charges: charges, profit: profit };
+}
+
+function updateCard(prefix, d) {
+  $(prefix + '-revenue').textContent = fmtMoney(d.revenue);
+  var profitEl = $(prefix + '-profit');
+  profitEl.textContent = fmtMoney(d.profit);
+  profitEl.parentNode.classList.toggle('negative', d.profit < 0);
+}
+
+function computeAll() {
+  var charges =
+    (parseFloat($('charge-rent').value) || 0) +
+    (parseFloat($('charge-subscriptions').value) || 0) +
+    (parseFloat($('charge-cleaning').value) || 0) +
+    (parseFloat($('charge-accountant').value) || 0) +
+    (parseFloat($('charge-insurance').value) || 0);
+
+  // Section Revenus locatifs (calcul auto à partir du taux)
+  var price = parseFloat($('nightly-price').value) || 0;
+  var occupancy = parseFloat($('occupancy-rate').value) || 0;
+  var autoNights = Math.floor((occupancy / 100) * 30);
+  var autoRevenue = autoNights * price;
+
+  $('monthly-revenue-display').value = fmtMoney(autoRevenue);
+
+  var bi = $('benefit-inline');
+  var biv = $('benefit-inline-value');
+  biv.textContent = fmtMoney(autoRevenue - charges);
+  bi.classList.toggle('negative', (autoRevenue - charges) < 0);
+
+  // Les 3 scénarios utilisent les NUITS saisies manuellement
+  var pPrice = parseFloat($('p-price').value) || 0;
+  var pNights = parseFloat($('p-nights-input').value) || 0;
+  var rPrice = parseFloat($('r-price').value) || 0;
+  var rNights = parseFloat($('r-nights-input').value) || 0;
+  var oPrice = parseFloat($('o-price').value) || 0;
+  var oNights = parseFloat($('o-nights-input').value) || 0;
+
+  updateCard('p', computeScenario(pPrice, pNights, charges));
+  updateCard('r', computeScenario(rPrice, rNights, charges));
+  updateCard('o', computeScenario(oPrice, oNights, charges));
+}
+
+// Synchronisation : quand on change le taux %, on met à jour les nuits automatiquement
+function syncFromOccupancy(scenarioPrefix) {
+  var occ = parseFloat($(scenarioPrefix + '-occupancy-input').value) || 0;
+  var nights = Math.floor((occ / 100) * 30);
+  $(scenarioPrefix + '-nights-input').value = nights;
+}
+
+// Quand on change le taux dans un scénario, on met à jour les nuits
+$('p-occupancy-input').addEventListener('input', function() { syncFromOccupancy('p'); computeAll(); });
+$('r-occupancy-input').addEventListener('input', function() { syncFromOccupancy('r'); computeAll(); });
+$('o-occupancy-input').addEventListener('input', function() { syncFromOccupancy('o'); computeAll(); });
+
+// Tous les autres inputs : recalcul
+document.querySelectorAll('input, select').forEach(function(el) {
+  el.addEventListener('input', computeAll);
+  el.addEventListener('change', computeAll);
+});
+
+computeAll();
+</script>
+</body>
+</html>
